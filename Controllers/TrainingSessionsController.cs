@@ -3,15 +3,14 @@ using Befit.Models;
 using Befit.Models.DTO;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Befit.Controllers
 {
+    [Authorize]
     public class TrainingSessionsController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -22,6 +21,7 @@ namespace Befit.Controllers
             _context = context;
             _userManager = userManager;
         }
+
         private string GetUserId()
         {
             return _userManager.GetUserId(User);
@@ -30,24 +30,22 @@ namespace Befit.Controllers
         // GET: TrainingSessions
         public async Task<IActionResult> Index()
         {
-            return View(await _context.TrainingSessions.Where(t => t.UserId == GetUserId()).ToListAsync());
+            return View(await _context.TrainingSessions
+                .Where(t => t.UserId == GetUserId())
+                .ToListAsync());
         }
 
         // GET: TrainingSessions/Details/5
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null)
-            {
                 return NotFound();
-            }
 
             var trainingSession = await _context.TrainingSessions
-            .FirstOrDefaultAsync(m => m.Id == id && m.UserId == GetUserId());
+                .FirstOrDefaultAsync(m => m.Id == id && m.UserId == GetUserId());
 
             if (trainingSession == null)
-            {
                 return NotFound();
-            }
 
             return View(trainingSession);
         }
@@ -59,8 +57,6 @@ namespace Befit.Controllers
         }
 
         // POST: TrainingSessions/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(TrainingSessionCreateDto dto)
@@ -86,55 +82,52 @@ namespace Befit.Controllers
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
-            {
                 return NotFound();
-            }
 
             var trainingSession = await _context.TrainingSessions
-            .FirstOrDefaultAsync(t => t.Id == id && t.UserId == GetUserId());
+                .FirstOrDefaultAsync(t => t.Id == id && t.UserId == GetUserId());
 
             if (trainingSession == null)
-            {
                 return NotFound();
-            }
+
             return View(trainingSession);
         }
 
         // POST: TrainingSessions/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,StartTime,EndTime")] TrainingSession trainingSession)
+        public async Task<IActionResult> Edit(int id, TrainingSession trainingSession)
         {
             if (id != trainingSession.Id)
-            {
                 return NotFound();
-            }
+
+            var existing = await _context.TrainingSessions
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t => t.Id == id && t.UserId == GetUserId());
+
+            if (existing == null)
+                return NotFound();
 
             if (ModelState.IsValid)
             {
+                trainingSession.UserId = existing.UserId;
+
                 try
                 {
-                    var existing = await _context.TrainingSessions.AsNoTracking()
-                    .FirstOrDefaultAsync(t => t.Id == id && t.UserId == GetUserId());
-                    if (existing == null)
-                        return NotFound();
+                    _context.Update(trainingSession);
                     await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
                 {
                     if (!TrainingSessionExists(trainingSession.Id))
-                    {
                         return NotFound();
-                    }
                     else
-                    {
                         throw;
-                    }
                 }
+
                 return RedirectToAction(nameof(Index));
             }
+
             return View(trainingSession);
         }
 
@@ -142,16 +135,13 @@ namespace Befit.Controllers
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null)
-            {
                 return NotFound();
-            }
 
             var trainingSession = await _context.TrainingSessions
-            .FirstOrDefaultAsync(m => m.Id == id && m.UserId == GetUserId());
+                .FirstOrDefaultAsync(m => m.Id == id && m.UserId == GetUserId());
+
             if (trainingSession == null)
-            {
                 return NotFound();
-            }
 
             return View(trainingSession);
         }
