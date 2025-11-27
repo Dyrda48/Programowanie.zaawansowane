@@ -8,6 +8,8 @@ namespace Befit.Models
 
         [Required]
         [StringLength(100)]
+
+        [Display(Name = "Squats")]
         public string Name { get; set; } = string.Empty;
     }
 }

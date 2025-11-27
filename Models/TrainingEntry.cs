@@ -6,24 +6,22 @@ namespace Befit.Models
     {
         public int Id { get; set; }
 
-        [Required]
+        [Display(Name = "trening")]
         public int TrainingSessionId { get; set; }
-        public TrainingSession? TrainingSession { get; set; }
 
-        [Required]
+        [Display(Name = "Typ ćwiczenia")]
         public int ExerciseTypeId { get; set; }
-        public ExerciseType? ExerciseType { get; set; }
 
-        [Required]
-        [Range(0, 1000)]
+        [Display(Name = "Waga")]
         public double Weight { get; set; }
 
-        [Required]
-        [Range(1, 50)]
+        [Display(Name = "Ilość setów")]
         public int Sets { get; set; }
 
-        [Required]
-        [Range(1, 100)]
+        [Display(Name = "Powtórzenia w setu")]
         public int Reps { get; set; }
+
+        public TrainingSession TrainingSession { get; set; }
+        public ExerciseType ExerciseType { get; set; }
     }
 }
