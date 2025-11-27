@@ -4,6 +4,9 @@ namespace Befit.Models
 {
     public class TrainingEntry
     {
+        public string UserId { get; set; }
+        public ApplicationUser User { get; set; }
+
         public int Id { get; set; }
 
         [Display(Name = "trening")]
@@ -18,7 +21,7 @@ namespace Befit.Models
         [Display(Name = "Ilość setów")]
         public int Sets { get; set; }
 
-        [Display(Name = "Powtórzenia w setu")]
+        [Display(Name = "Powtórzenia w secie")]
         public int Reps { get; set; }
 
         public TrainingSession TrainingSession { get; set; }
