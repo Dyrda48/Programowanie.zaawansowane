@@ -1,28 +1,36 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using Befit.Data;
+using Befit.Models;
+using Befit.Models.DTO;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using Befit.Data;
-using Befit.Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Befit.Controllers
 {
     public class TrainingSessionsController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public TrainingSessionsController(ApplicationDbContext context)
+        public TrainingSessionsController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
         {
             _context = context;
+            _userManager = userManager;
+        }
+        private string GetUserId()
+        {
+            return _userManager.GetUserId(User);
         }
 
         // GET: TrainingSessions
         public async Task<IActionResult> Index()
         {
-            return View(await _context.TrainingSessions.ToListAsync());
+            return View(await _context.TrainingSessions.Where(t => t.UserId == GetUserId()).ToListAsync());
         }
 
         // GET: TrainingSessions/Details/5
@@ -34,7 +42,8 @@ namespace Befit.Controllers
             }
 
             var trainingSession = await _context.TrainingSessions
-                .FirstOrDefaultAsync(m => m.Id == id);
+            .FirstOrDefaultAsync(m => m.Id == id && m.UserId == GetUserId());
+
             if (trainingSession == null)
             {
                 return NotFound();
@@ -54,15 +63,23 @@ namespace Befit.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,StartTime,EndTime")] TrainingSession trainingSession)
+        public async Task<IActionResult> Create(TrainingSessionCreateDto dto)
         {
             if (ModelState.IsValid)
             {
-                _context.Add(trainingSession);
+                var session = new TrainingSession
+                {
+                    StartTime = dto.StartTime,
+                    EndTime = dto.EndTime,
+                    UserId = GetUserId()
+                };
+
+                _context.Add(session);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            return View(trainingSession);
+
+            return View(dto);
         }
 
         // GET: TrainingSessions/Edit/5
@@ -73,7 +90,9 @@ namespace Befit.Controllers
                 return NotFound();
             }
 
-            var trainingSession = await _context.TrainingSessions.FindAsync(id);
+            var trainingSession = await _context.TrainingSessions
+            .FirstOrDefaultAsync(t => t.Id == id && t.UserId == GetUserId());
+
             if (trainingSession == null)
             {
                 return NotFound();
@@ -97,7 +116,10 @@ namespace Befit.Controllers
             {
                 try
                 {
-                    _context.Update(trainingSession);
+                    var existing = await _context.TrainingSessions.AsNoTracking()
+                    .FirstOrDefaultAsync(t => t.Id == id && t.UserId == GetUserId());
+                    if (existing == null)
+                        return NotFound();
                     await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
@@ -125,7 +147,7 @@ namespace Befit.Controllers
             }
 
             var trainingSession = await _context.TrainingSessions
-                .FirstOrDefaultAsync(m => m.Id == id);
+            .FirstOrDefaultAsync(m => m.Id == id && m.UserId == GetUserId());
             if (trainingSession == null)
             {
                 return NotFound();
@@ -139,13 +161,15 @@ namespace Befit.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var trainingSession = await _context.TrainingSessions.FindAsync(id);
-            if (trainingSession != null)
-            {
-                _context.TrainingSessions.Remove(trainingSession);
-            }
+            var trainingSession = await _context.TrainingSessions
+                .FirstOrDefaultAsync(t => t.Id == id && t.UserId == GetUserId());
 
+            if (trainingSession == null)
+                return NotFound();
+
+            _context.TrainingSessions.Remove(trainingSession);
             await _context.SaveChangesAsync();
+
             return RedirectToAction(nameof(Index));
         }
 
