@@ -2,34 +2,24 @@
 
 namespace Befit.Models
 {
-    public class TrainingSession : IValidatableObject
+    public class TrainingSession
     {
         public int Id { get; set; }
 
         [Required]
-        [Display(Name = "Data rozpoczęcia")]
-        [DisplayFormat(DataFormatString = "{0:dd.MM.yyyy HH:mm}")]
+        [Display(Name = "Rozpoczęcie treningu")]
+        [DataType(DataType.DateTime)]
         public DateTime StartTime { get; set; }
 
         [Required]
-        [Display(Name = "Data zakończenia")]
-        [DisplayFormat(DataFormatString = "{0:dd.MM.yyyy HH:mm}")]
+        [Display(Name = "Zakończenie treningu")]
+        [DataType(DataType.DateTime)]
         public DateTime EndTime { get; set; }
+        public string UserId { get; set; }
 
         [Display(Name = "Użytkownik")]
-        public string UserId { get; set; }
         public ApplicationUser User { get; set; }
 
         public ICollection<TrainingEntry> TrainingEntries { get; set; } = new List<TrainingEntry>();
-
-        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
-        {
-            if (EndTime < StartTime)
-            {
-                yield return new ValidationResult(
-                    "Data zakończenia nie może być wcześniejsza niż data rozpoczęcia.",
-                    new[] { nameof(EndTime) });
-            }
-        }
     }
 }
