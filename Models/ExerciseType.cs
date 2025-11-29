@@ -7,9 +7,8 @@ namespace Befit.Models
         public int Id { get; set; }
 
         [Required]
-        [StringLength(100)]
-
-        [Display(Name = "Squats")]
+        [MaxLength(100)]
+        [Display(Name = "Nazwa ćwiczenia")]
         public string Name { get; set; } = string.Empty;
     }
 }

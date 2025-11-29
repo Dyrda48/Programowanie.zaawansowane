@@ -1,18 +1,21 @@
 ﻿@model IEnumerable<Befit.Models.ExerciseStatsViewModel>
 
-<h1>Statystyki ćwiczeń</h1>
+@{
+    ViewData["Title"] = "Statystyki ćwiczeń";
+}
+
+<h1>Statystyki ćwiczeń z ostatnich 4 tygodni</h1>
 
 <table class="table">
     <thead>
         <tr>
-            <th>Ćwiczenie</th>
-            <th>Ilość wykonań</th>
+            <th>Nazwa ćwiczenia</th>
+            <th>Ile razy wykonane</th>
             <th>Łączna liczba powtórzeń</th>
-            <th>Średnie obciążenie</th>
-            <th>Maksymalne obciążenie</th>
+            <th>Średnie obciążenie (kg)</th>
+            <th>Maksymalne obciążenie (kg)</th>
         </tr>
     </thead>
-
     <tbody>
         @foreach (var item in Model)
         {
@@ -20,8 +23,8 @@
                 <td>@item.ExerciseName</td>
                 <td>@item.TimesPerformed</td>
                 <td>@item.TotalReps</td>
-                <td>@item.AverageWeight</td>
-                <td>@item.MaxWeight</td>
+                <td>@item.AverageWeight.ToString("0.0")</td>
+                <td>@item.MaxWeight.ToString("0.0")</td>
             </tr>
         }
     </tbody>

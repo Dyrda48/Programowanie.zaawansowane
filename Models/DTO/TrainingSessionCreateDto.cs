@@ -3,12 +3,21 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Befit.Models.DTO
 {
-    public class TrainingSessionCreateDto
-    {
-        [Required]
-        public DateTime StartTime { get; set; }
+    using System.ComponentModel.DataAnnotations;
 
-        [Required]
-        public DateTime EndTime { get; set; }
+    namespace Befit.Models.DTO
+    {
+        public class TrainingSessionCreateDto
+        {
+            [Required]
+            [Display(Name = "Data rozpoczęcia")]
+            [DisplayFormat(DataFormatString = "{0:yyyy-MM-ddTHH:mm}", ApplyFormatInEditMode = true)]
+            public DateTime StartTime { get; set; }
+
+            [Required]
+            [Display(Name = "Data zakończenia")]
+            [DisplayFormat(DataFormatString = "{0:yyyy-MM-ddTHH:mm}", ApplyFormatInEditMode = true)]
+            public DateTime EndTime { get; set; }
+        }
     }
 }

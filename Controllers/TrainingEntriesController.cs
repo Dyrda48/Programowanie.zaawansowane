@@ -1,13 +1,11 @@
 ﻿using Befit.Data;
 using Befit.Models;
 using Befit.Models.DTO;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authorization;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Befit.Controllers
 {
@@ -17,26 +15,28 @@ namespace Befit.Controllers
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
 
-        public TrainingEntriesController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+        public TrainingEntriesController(ApplicationDbContext context,
+                                         UserManager<ApplicationUser> userManager)
         {
             _context = context;
             _userManager = userManager;
         }
 
-        private string GetUserId()
-        {
-            return _userManager.GetUserId(User);
-        }
+        private string GetUserId() => _userManager.GetUserId(User);
 
         // GET: TrainingEntries
         public async Task<IActionResult> Index()
         {
-            var entries = _context.TrainingEntries
-                .Include(t => t.ExerciseType)
-                .Include(t => t.TrainingSession)
-                .Where(t => t.UserId == GetUserId());
+            var userId = GetUserId();
 
-            return View(await entries.ToListAsync());
+            var entries = await _context.TrainingEntries
+                .Include(e => e.ExerciseType)
+                .Include(e => e.TrainingSession)
+                .Where(e => e.UserId == userId)
+                .OrderByDescending(e => e.TrainingSession.StartTime)
+                .ToListAsync();
+
+            return View(entries);
         }
 
         // GET: TrainingEntries/Details/5
@@ -45,10 +45,12 @@ namespace Befit.Controllers
             if (id == null)
                 return NotFound();
 
+            var userId = GetUserId();
+
             var entry = await _context.TrainingEntries
-                .Include(t => t.ExerciseType)
-                .Include(t => t.TrainingSession)
-                .FirstOrDefaultAsync(t => t.Id == id && t.UserId == GetUserId());
+                .Include(e => e.ExerciseType)
+                .Include(e => e.TrainingSession)
+                .FirstOrDefaultAsync(e => e.Id == id && e.UserId == userId);
 
             if (entry == null)
                 return NotFound();
@@ -59,12 +61,14 @@ namespace Befit.Controllers
         // GET: TrainingEntries/Create
         public IActionResult Create()
         {
+            var userId = GetUserId();
+
             ViewData["ExerciseTypeId"] = new SelectList(_context.ExerciseTypes, "Id", "Name");
             ViewData["TrainingSessionId"] = new SelectList(
-                _context.TrainingSessions.Where(s => s.UserId == GetUserId()),
-                "Id", "StartTime"
-            );
-            return View();
+                _context.TrainingSessions.Where(s => s.UserId == userId),
+                "Id", "StartTime");
+
+            return View(new TrainingEntryCreateDto());
         }
 
         // POST: TrainingEntries/Create
@@ -72,29 +76,32 @@ namespace Befit.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(TrainingEntryCreateDto dto)
         {
-            if (ModelState.IsValid)
-            {
-                var entry = new TrainingEntry
-                {
-                    TrainingSessionId = dto.TrainingSessionId,
-                    ExerciseTypeId = dto.ExerciseTypeId,
-                    Weight = dto.Weight,
-                    Sets = dto.Sets,
-                    Reps = dto.Reps,
-                    UserId = GetUserId()
-                };
+            var userId = GetUserId();
 
-                _context.Add(entry);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+            if (!ModelState.IsValid)
+            {
+                ViewData["ExerciseTypeId"] = new SelectList(_context.ExerciseTypes, "Id", "Name", dto.ExerciseTypeId);
+                ViewData["TrainingSessionId"] = new SelectList(
+                    _context.TrainingSessions.Where(s => s.UserId == userId),
+                    "Id", "StartTime", dto.TrainingSessionId);
+
+                return View(dto);
             }
 
-            ViewData["ExerciseTypeId"] = new SelectList(_context.ExerciseTypes, "Id", "Name", dto.ExerciseTypeId);
-            ViewData["TrainingSessionId"] = new SelectList(
-                _context.TrainingSessions.Where(s => s.UserId == GetUserId()),
-                "Id", "StartTime", dto.TrainingSessionId);
+            var entry = new TrainingEntry
+            {
+                TrainingSessionId = dto.TrainingSessionId,
+                ExerciseTypeId = dto.ExerciseTypeId,
+                Weight = dto.Weight,
+                Sets = dto.Sets,
+                Reps = dto.Reps,
+                UserId = userId
+            };
 
-            return View(dto);
+            _context.TrainingEntries.Add(entry);
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction(nameof(Index));
         }
 
         // GET: TrainingEntries/Edit/5
@@ -103,8 +110,10 @@ namespace Befit.Controllers
             if (id == null)
                 return NotFound();
 
+            var userId = GetUserId();
+
             var entry = await _context.TrainingEntries
-                .FirstOrDefaultAsync(e => e.Id == id && e.UserId == GetUserId());
+                .FirstOrDefaultAsync(e => e.Id == id && e.UserId == userId);
 
             if (entry == null)
                 return NotFound();
@@ -122,7 +131,7 @@ namespace Befit.Controllers
 
             ViewData["ExerciseTypeId"] = new SelectList(_context.ExerciseTypes, "Id", "Name", dto.ExerciseTypeId);
             ViewData["TrainingSessionId"] = new SelectList(
-                _context.TrainingSessions.Where(s => s.UserId == GetUserId()),
+                _context.TrainingSessions.Where(s => s.UserId == userId),
                 "Id", "StartTime", dto.TrainingSessionId);
 
             return View(dto);
@@ -133,32 +142,42 @@ namespace Befit.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, TrainingEntryCreateDto dto)
         {
+            var userId = GetUserId();
+
             var entry = await _context.TrainingEntries
-                .FirstOrDefaultAsync(t => t.Id == id && t.UserId == GetUserId());
+                .FirstOrDefaultAsync(e => e.Id == id && e.UserId == userId);
 
             if (entry == null)
                 return NotFound();
 
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
-                entry.TrainingSessionId = dto.TrainingSessionId;
-                entry.ExerciseTypeId = dto.ExerciseTypeId;
-                entry.Weight = dto.Weight;
-                entry.Sets = dto.Sets;
-                entry.Reps = dto.Reps;
+                ViewBag.EntryId = id;
+                ViewData["ExerciseTypeId"] = new SelectList(_context.ExerciseTypes, "Id", "Name", dto.ExerciseTypeId);
+                ViewData["TrainingSessionId"] = new SelectList(
+                    _context.TrainingSessions.Where(s => s.UserId == userId),
+                    "Id", "StartTime", dto.TrainingSessionId);
 
-                _context.Update(entry);
-                await _context.SaveChangesAsync();
-
-                return RedirectToAction(nameof(Index));
+                return View(dto);
             }
 
-            ViewData["ExerciseTypeId"] = new SelectList(_context.ExerciseTypes, "Id", "Name", dto.ExerciseTypeId);
-            ViewData["TrainingSessionId"] = new SelectList(
-                _context.TrainingSessions.Where(s => s.UserId == GetUserId()),
-                "Id", "StartTime", dto.TrainingSessionId);
+            entry.TrainingSessionId = dto.TrainingSessionId;
+            entry.ExerciseTypeId = dto.ExerciseTypeId;
+            entry.Weight = dto.Weight;
+            entry.Sets = dto.Sets;
+            entry.Reps = dto.Reps;
 
-            return View(dto);
+            try
+            {
+                _context.Update(entry);
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                throw;
+            }
+
+            return RedirectToAction(nameof(Index));
         }
 
         // GET: TrainingEntries/Delete/5
@@ -167,10 +186,12 @@ namespace Befit.Controllers
             if (id == null)
                 return NotFound();
 
+            var userId = GetUserId();
+
             var entry = await _context.TrainingEntries
-                .Include(t => t.ExerciseType)
-                .Include(t => t.TrainingSession)
-                .FirstOrDefaultAsync(t => t.Id == id && t.UserId == GetUserId());
+                .Include(e => e.ExerciseType)
+                .Include(e => e.TrainingSession)
+                .FirstOrDefaultAsync(e => e.Id == id && e.UserId == userId);
 
             if (entry == null)
                 return NotFound();
@@ -183,8 +204,10 @@ namespace Befit.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
+            var userId = GetUserId();
+
             var entry = await _context.TrainingEntries
-                .FirstOrDefaultAsync(t => t.Id == id && t.UserId == GetUserId());
+                .FirstOrDefaultAsync(e => e.Id == id && e.UserId == userId);
 
             if (entry == null)
                 return NotFound();

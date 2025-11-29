@@ -4,18 +4,21 @@ namespace Befit.Models
 {
     public class TrainingSession : IValidatableObject
     {
-        public string UserId { get; set; }
-        public ApplicationUser User { get; set; }
-
         public int Id { get; set; }
 
         [Required]
-        [Display(Name = "Data i czas rozpoczęcia")]
+        [Display(Name = "Data rozpoczęcia")]
+        [DisplayFormat(DataFormatString = "{0:dd.MM.yyyy HH:mm}")]
         public DateTime StartTime { get; set; }
 
         [Required]
-        [Display(Name = "Data i czas zakończenia")]
+        [Display(Name = "Data zakończenia")]
+        [DisplayFormat(DataFormatString = "{0:dd.MM.yyyy HH:mm}")]
         public DateTime EndTime { get; set; }
+
+        [Display(Name = "Użytkownik")]
+        public string UserId { get; set; }
+        public ApplicationUser User { get; set; }
 
         public ICollection<TrainingEntry> TrainingEntries { get; set; } = new List<TrainingEntry>();
 

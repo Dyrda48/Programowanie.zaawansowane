@@ -4,9 +4,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Befit.Controllers
 {
@@ -16,53 +13,54 @@ namespace Befit.Controllers
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
 
-        public StatsController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+        public StatsController(ApplicationDbContext context,
+                               UserManager<ApplicationUser> userManager)
         {
             _context = context;
             _userManager = userManager;
         }
 
-        private string GetUserId()
-        {
-            return _userManager.GetUserId(User);
-        }
+        private string GetUserId() => _userManager.GetUserId(User);
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            DateTime monthAgo = DateTime.Now.AddDays(-28);
-
             var userId = GetUserId();
+            var fromDate = DateTime.Now.AddDays(-28);
 
-            var stats = _context.ExerciseTypes
+            var stats = await _context.ExerciseTypes
                 .Select(type => new ExerciseStatsViewModel
                 {
                     ExerciseName = type.Name,
 
                     TimesPerformed = _context.TrainingEntries
+                        .Include(e => e.TrainingSession)
                         .Where(e => e.ExerciseTypeId == type.Id &&
                                     e.UserId == userId &&
-                                    e.TrainingSession.StartTime >= monthAgo)
+                                    e.TrainingSession.StartTime >= fromDate)
                         .Count(),
 
                     TotalReps = _context.TrainingEntries
+                        .Include(e => e.TrainingSession)
                         .Where(e => e.ExerciseTypeId == type.Id &&
                                     e.UserId == userId &&
-                                    e.TrainingSession.StartTime >= monthAgo)
-                        .Sum(e => (int?)e.Sets * e.Reps) ?? 0,
+                                    e.TrainingSession.StartTime >= fromDate)
+                        .Sum(e => (int?)(e.Sets * e.Reps)) ?? 0,
 
                     AverageWeight = _context.TrainingEntries
+                        .Include(e => e.TrainingSession)
                         .Where(e => e.ExerciseTypeId == type.Id &&
                                     e.UserId == userId &&
-                                    e.TrainingSession.StartTime >= monthAgo)
+                                    e.TrainingSession.StartTime >= fromDate)
                         .Average(e => (double?)e.Weight) ?? 0,
 
                     MaxWeight = _context.TrainingEntries
+                        .Include(e => e.TrainingSession)
                         .Where(e => e.ExerciseTypeId == type.Id &&
                                     e.UserId == userId &&
-                                    e.TrainingSession.StartTime >= monthAgo)
+                                    e.TrainingSession.StartTime >= fromDate)
                         .Max(e => (double?)e.Weight) ?? 0
                 })
-                .ToList();
+                .ToListAsync();
 
             return View(stats);
         }
